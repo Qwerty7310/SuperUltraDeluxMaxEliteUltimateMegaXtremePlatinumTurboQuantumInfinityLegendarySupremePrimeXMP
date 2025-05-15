@@ -6,7 +6,9 @@
         xmlns:local="clr-namespace:SDUDPMEUHMEPTQILSPX"
         xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="Super Duper Ultra Deluxe Pro Max Elite Ultimate Hyper Mega Extreme Platinum Turbo Quantum Infinity Legendary Supreme Prime X 😎🔥 Music Player™ ® ©" Height="500" Width="1000"
+        xmlns:ui="http://schemas.modernwpf.com/2019"
+        ui:WindowHelper.UseModernWindowStyle="True">
     <Grid>
         <Button x:Name="btnPause" Content="Pause" HorizontalAlignment="Left" Margin="185,304,0,0" VerticalAlignment="Top" Click="btnPause_Click" IsEnabled="False"/>
         <Button x:Name="btnPlay" Content="Play" HorizontalAlignment="Left" Margin="242,304,0,0" VerticalAlignment="Top" IsEnabled="False" Click="btnPlay_Click"/>
