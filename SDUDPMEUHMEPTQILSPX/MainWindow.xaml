@@ -4,9 +4,19 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SDUDPMEUHMEPTQILSPX"
+        xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
-
+        <Button x:Name="btnPause" Content="Pause" HorizontalAlignment="Left" Margin="185,304,0,0" VerticalAlignment="Top" Click="btnPause_Click" IsEnabled="False"/>
+        <Button x:Name="btnPlay" Content="Play" HorizontalAlignment="Left" Margin="242,304,0,0" VerticalAlignment="Top" IsEnabled="False" Click="btnPlay_Click"/>
+        <Button x:Name="btnSelect" Content="Select" HorizontalAlignment="Left" Margin="290,304,0,0" VerticalAlignment="Top" Click="btnSelect_Click"/>
+        <Label x:Name="lblCurrentFile" Content="None" HorizontalAlignment="Left" Margin="236,256,0,0" VerticalAlignment="Top"/>
+        <MediaElement x:Name="mediaElement" LoadedBehavior="Manual" HorizontalAlignment="Left" Height="100" Margin="10,10,0,0" VerticalAlignment="Top" Width="100" MediaOpened="mediaElement_MediaOpened" MediaEnded="mediaElement_MediaEnded"/>
+        <Button x:Name="btnStop" Content="Stop" HorizontalAlignment="Left" Margin="136,304,0,0" VerticalAlignment="Top" Click="btnStop_Click" IsEnabled="False"/>
+        <Slider x:Name="sliderPosition" HorizontalAlignment="Left" Margin="136,342,0,0" VerticalAlignment="Top" Width="189" Maximum="1" PreviewMouseDown="sliderPosition_PreviewMouseDown" PreviewMouseUp="sliderPosition_PreviewMouseUp"/>
+        <Label x:Name="lblPosition" Content="00:00/00:00" HorizontalAlignment="Left" Margin="340,338,0,0" VerticalAlignment="Top"/>
+        <Slider x:Name="sliderVolume" HorizontalAlignment="Left" Margin="136,365,0,0" VerticalAlignment="Top" Width="120" Maximum="1" SmallChange="0.01" Value="0.5" ValueChanged="sliderVolume_ValueChanged"/>
+        <xctk:IntegerUpDown x:Name="intVolume" HorizontalAlignment="Left" Margin="340,361,0,0" VerticalAlignment="Top" Increment="1" Minimum="0" Maximum="100" Text="50" Width="72" ValueChanged="intVolume_ValueChanged"/>
     </Grid>
 </Window>
