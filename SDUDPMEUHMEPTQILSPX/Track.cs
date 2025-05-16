@@ -4,7 +4,7 @@
         public string Path { get; }
         public string? Artist { get; }
         public string? Album { get; }
-        public TimeSpan Duration { get; }
+        public TimeSpan Duration { get; set; }
 
         public Track(string path) {
             try {

@@ -16,13 +16,12 @@
         <Label x:Name="lblCurrentFile" Content="None" HorizontalAlignment="Left" Margin="222,266,0,0" VerticalAlignment="Top"/>
         <MediaElement x:Name="mediaElement" LoadedBehavior="Manual" HorizontalAlignment="Left" Height="100" Margin="10,10,0,0" VerticalAlignment="Top" Width="100" MediaOpened="mediaElement_MediaOpened" MediaEnded="mediaElement_MediaEnded"/>
         <Button x:Name="btnStop" Content="Stop" HorizontalAlignment="Left" Margin="136,304,0,0" VerticalAlignment="Top" Click="btnStop_Click" IsEnabled="False"/>
-        <Slider x:Name="sliderPosition" HorizontalAlignment="Left" Margin="136,342,0,0" VerticalAlignment="Top" Width="189" Maximum="1" PreviewMouseDown="sliderPosition_PreviewMouseDown" PreviewMouseUp="sliderPosition_PreviewMouseUp"/>
+        <Slider x:Name="sliderPosition" HorizontalAlignment="Left" Margin="136,342,0,0" VerticalAlignment="Top" Width="189" Maximum="1" IsMoveToPointEnabled="True" PreviewMouseDown="sliderPosition_PreviewMouseDown" PreviewMouseUp="sliderPosition_PreviewMouseUp"/>
         <Label x:Name="lblPosition" Content="00:00/00:00" HorizontalAlignment="Left" Margin="340,338,0,0" VerticalAlignment="Top"/>
-        <Slider x:Name="sliderVolume" HorizontalAlignment="Left" Margin="136,365,0,0" VerticalAlignment="Top" Width="120" Maximum="1" SmallChange="0.01" Value="0.5" ValueChanged="sliderVolume_ValueChanged"/>
-        <xctk:IntegerUpDown x:Name="intVolume" HorizontalAlignment="Left" Margin="340,361,0,0" VerticalAlignment="Top" Increment="1" Minimum="0" Maximum="100" Text="50" Width="72" ValueChanged="intVolume_ValueChanged"/>
-        <Label Content="In queue:" HorizontalAlignment="Left" Margin="340,405,0,0" VerticalAlignment="Top"/>
-        <Label x:Name="lblQueueCount" Content="0" HorizontalAlignment="Left" Margin="402,405,0,0" VerticalAlignment="Top"/>
-        <Button x:Name="btnReset" Content="Reset" Margin="440,398,0,0" VerticalAlignment="Top" Click="btnReset_Click"/>
+        <Slider x:Name="sliderVolume" HorizontalAlignment="Left" Margin="136,365,0,0" VerticalAlignment="Top" Width="120" Maximum="1" SmallChange="0.01" Value="0.5" IsMoveToPointEnabled="True" ValueChanged="sliderVolume_ValueChanged"/>
+        <xctk:IntegerUpDown x:Name="intVolume" HorizontalAlignment="Left" Margin="340,371,0,0" VerticalAlignment="Top" Increment="1" Minimum="0" Maximum="100" Text="50" Width="72" ValueChanged="intVolume_ValueChanged"/>
         <ListBox x:Name="lbQueue" Margin="800,0,0,0" DisplayMemberPath="Title"/>
+        <Button x:Name="btnNext" Content="Next" Margin="350,304,0,0" VerticalAlignment="Top" Click="btnNext_Click" IsEnabled="False"/>
+        <Button x:Name="btnPrev" Content="Previous" Margin="61,304,0,0" VerticalAlignment="Top" Click="btnPrev_Click" IsEnabled="False"/>
     </Grid>
 </Window>

@@ -10,23 +10,25 @@ namespace SDUDPMEUHMEPTQILSPX;
 /// Interaction logic for MainWindow.xaml
 /// </summary>
 public partial class MainWindow : Window {
-    public Track? currentTrack;
+    public Track? currentTrack { get; set; }
     public ObservableCollection<Track> queue = [];
 
+    private int _qIndex = 0;
     private readonly DispatcherTimer _positionTimer;
     private TimeSpan _lastPosition;
     private bool _isUserDraggingSlider = false;
+
+    private readonly double _volumeCoef = 0.6;
 
     public MainWindow() {
         double volume = Properties.Settings.Default.Volume;
         InitializeComponent();
         lbQueue.ItemsSource = queue;
 
-        _positionTimer = new DispatcherTimer
-            { Interval = TimeSpan.FromMilliseconds(100) }; // Helper timer for position slider updates
+        _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) }; // Helper timer for position slider updates
         _positionTimer.Tick += OnPositionCheck;
 
-        mediaElement.Volume = volume * 0.25;
+        mediaElement.Volume = volume * _volumeCoef;
         intVolume.Value = (int?)Math.Round(volume * 100);
         sliderVolume.Value = volume;
     }
@@ -37,35 +39,29 @@ public partial class MainWindow : Window {
                 "Music files (*.mp3;*.wma;*.wav;*.aac;*.m4a;*.asf;*.mid;*.midi)|*.mp3;*.wma;*.wav;*.aac;*.m4a;*.asf;*.mid;*.midi"
         };
         if (openFileDialog.ShowDialog() == true) {
-            //ResetMediaElement();
-
             queue.Add(new Track(openFileDialog.FileName));
             if (mediaElement.Source == null) {
                 currentTrack = queue[0];
-                queue.RemoveAt(0);
+                //queue.RemoveAt(0);
                 SetTrack();
             }
-
-            lblQueueCount.Content = queue.Count;
-        }
-        else
-            System.Windows.MessageBox.Show("An error occurred", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        } else
+            MessageBox.Show("An error occurred", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
     }
 
     private void mediaElement_MediaOpened(object sender, RoutedEventArgs e) {
         if (currentTrack == null) return;
+        if (currentTrack.Duration - mediaElement.NaturalDuration.TimeSpan > TimeSpan.FromSeconds(1)) {
+            MessageBox.Show($"Duration missmatch: {currentTrack.Duration}, {mediaElement.NaturalDuration.TimeSpan}", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            currentTrack.Duration = mediaElement.NaturalDuration.TimeSpan;
+        }
 
         _lastPosition = mediaElement.Position;
-        //_positionTimer.Start();
         lblPosition.Content =
             $"00:00/{currentTrack.Duration.Minutes:D2}:{currentTrack.Duration.Seconds:D2}";
     }
 
     private void mediaElement_MediaEnded(object sender, RoutedEventArgs e) {
-        //_positionTimer.Stop();
-        //mediaElement.Stop();
-        //btnPlay.IsEnabled = true;
-        //btnPause.IsEnabled = false;
         NextTrack();
     }
 
@@ -82,9 +78,17 @@ public partial class MainWindow : Window {
 
     private void OnPositionChanged(TimeSpan newPosition) {
         if (currentTrack == null) return;
+        if (currentTrack.Duration.TotalNanoseconds == 0) {
+            MessageBox.Show("Zero duration", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
         lblPosition.Content =
             $"{newPosition.Minutes:D2}:{newPosition.Seconds:D2}/{currentTrack.Duration.Minutes:D2}:{currentTrack.Duration.Seconds:D2}";
         sliderPosition.Value = newPosition.TotalSeconds / currentTrack.Duration.TotalSeconds;
+        if (newPosition != currentTrack.Duration)
+            btnNext.IsEnabled = true;
+        if (newPosition != TimeSpan.Zero)
+            btnPrev.IsEnabled = true;
     }
 
     private void btnPlay_Click(object sender, RoutedEventArgs e) {
@@ -144,30 +148,46 @@ public partial class MainWindow : Window {
 
         btnPlay.IsEnabled = true;
         btnStop.IsEnabled = true;
+        btnNext.IsEnabled = true;
     }
 
     private void NextTrack() {
-        if (queue.Count > 0) {
+        if (queue.Count > _qIndex + 1) {
             ResetMediaElement();
-            currentTrack = queue[0];
-            queue.RemoveAt(0);
-            lblQueueCount.Content = queue.Count;
+            currentTrack = queue[++_qIndex];
             SetTrack();
             btnPause.IsEnabled = true;
             btnPlay.IsEnabled = false;
             _positionTimer.Start();
             mediaElement.Play();
-        }
-        else {
+        } else {
             _positionTimer.Stop();
             mediaElement.Stop();
             btnPlay.IsEnabled = true;
             btnPause.IsEnabled = false;
+
+            btnNext.IsEnabled = false;
+            lblPosition.Content = $"{currentTrack.Duration.Minutes:D2}:{currentTrack.Duration.Seconds:D2}/{currentTrack.Duration.Minutes:D2}:{currentTrack.Duration.Seconds:D2}";
+            sliderPosition.Value = 1;
+        }
+    }
+
+    private void PreviousTrack() {
+        if (_qIndex != 0 && _lastPosition.Seconds < 5) {
+            ResetMediaElement();
+            currentTrack = queue[--_qIndex];
+            SetTrack();
+            btnPause.IsEnabled = true;
+            btnPlay.IsEnabled = false;
+            _positionTimer.Start();
+            mediaElement.Play();
+        } else {
+            mediaElement.Position = TimeSpan.Zero;
         }
     }
 
     private void sliderVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-        mediaElement.Volume = sliderVolume.Value * 0.25;
+        mediaElement.Volume = sliderVolume.Value * _volumeCoef;
         if (intVolume != null)
             intVolume.Value = (int?)Math.Round(sliderVolume.Value * 100);
         Properties.Settings.Default.Volume = sliderVolume.Value;
@@ -175,16 +195,18 @@ public partial class MainWindow : Window {
     }
 
     private void intVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e) {
-        mediaElement.Volume = (intVolume.Value ?? 0) * 0.0025;
+        mediaElement.Volume = (intVolume.Value ?? 0) * 0.001 * _volumeCoef;
         if (sliderVolume != null)
             sliderVolume.Value = (intVolume.Value ?? 0) * 0.01;
         Properties.Settings.Default.Volume = (intVolume.Value ?? 0) * 0.01;
         Properties.Settings.Default.Save();
     }
 
-    private void btnReset_Click(object sender, RoutedEventArgs e) {
-        ResetMediaElement();
-        queue.Clear();
-        lblQueueCount.Content = 0;
+    private void btnNext_Click(object sender, RoutedEventArgs e) {
+        NextTrack();
+    }
+
+    private void btnPrev_Click(object sender, RoutedEventArgs e) {
+        PreviousTrack();
     }
 }
