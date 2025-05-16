@@ -7,13 +7,21 @@
         public TimeSpan Duration { get; }
 
         public Track(string path) {
-            var file = TagLib.File.Create(path);
+            try {
+                var file = TagLib.File.Create(path);
+                Title = file.Tag.Title ?? System.IO.Path.GetFileNameWithoutExtension(path);
+                Artist = file.Tag.FirstAlbumArtist;
+                Album = file.Tag.Album;
+                Duration = file.Properties.Duration;
+            }
+            catch (TagLib.CorruptFileException) {
+                Title = System.IO.Path.GetFileNameWithoutExtension(path);
+                Artist = null;
+                Album = null;
+                Duration = TimeSpan.Zero;
+            }
 
-            Title = file.Tag.Title ?? System.IO.Path.GetFileNameWithoutExtension(path);
             Path = path;
-            Artist = file.Tag.FirstAlbumArtist;
-            Album = file.Tag.Album;
-            Duration = file.Properties.Duration;
         }
     }
 }

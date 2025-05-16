@@ -22,7 +22,8 @@ public partial class MainWindow : Window {
         InitializeComponent();
         lbQueue.ItemsSource = queue;
 
-        _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) }; // Helper timer for position slider updates
+        _positionTimer = new DispatcherTimer
+            { Interval = TimeSpan.FromMilliseconds(100) }; // Helper timer for position slider updates
         _positionTimer.Tick += OnPositionCheck;
 
         mediaElement.Volume = volume * 0.25;
@@ -32,7 +33,8 @@ public partial class MainWindow : Window {
 
     private void btnSelect_Click(object sender, RoutedEventArgs e) {
         OpenFileDialog openFileDialog = new() {
-            Filter = "Music files (*.mp3;*.wma;*.wav;*.aac;*.m4a;*.asf;*.mid;*.midi)|*.mp3;*.wma;*.wav;*.aac;*.m4a;*.asf;*.mid;*.midi"
+            Filter =
+                "Music files (*.mp3;*.wma;*.wav;*.aac;*.m4a;*.asf;*.mid;*.midi)|*.mp3;*.wma;*.wav;*.aac;*.m4a;*.asf;*.mid;*.midi"
         };
         if (openFileDialog.ShowDialog() == true) {
             //ResetMediaElement();
@@ -43,15 +45,20 @@ public partial class MainWindow : Window {
                 queue.RemoveAt(0);
                 SetTrack();
             }
+
             lblQueueCount.Content = queue.Count;
-        } else
+        }
+        else
             System.Windows.MessageBox.Show("An error occurred", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
     }
 
     private void mediaElement_MediaOpened(object sender, RoutedEventArgs e) {
+        if (currentTrack == null) return;
+
         _lastPosition = mediaElement.Position;
         //_positionTimer.Start();
-        lblPosition.Content = $"00:00/{mediaElement.NaturalDuration.TimeSpan.Minutes:D2}:{mediaElement.NaturalDuration.TimeSpan.Seconds:D2}";
+        lblPosition.Content =
+            $"00:00/{currentTrack.Duration.Minutes:D2}:{currentTrack.Duration.Seconds:D2}";
     }
 
     private void mediaElement_MediaEnded(object sender, RoutedEventArgs e) {
@@ -74,8 +81,10 @@ public partial class MainWindow : Window {
     }
 
     private void OnPositionChanged(TimeSpan newPosition) {
-        lblPosition.Content = $"{newPosition.Minutes:D2}:{newPosition.Seconds:D2}/{mediaElement.NaturalDuration.TimeSpan.Minutes:D2}:{mediaElement.NaturalDuration.TimeSpan.Seconds:D2}";
-        sliderPosition.Value = newPosition.TotalSeconds / mediaElement.NaturalDuration.TimeSpan.TotalSeconds;
+        if (currentTrack == null) return;
+        lblPosition.Content =
+            $"{newPosition.Minutes:D2}:{newPosition.Seconds:D2}/{currentTrack.Duration.Minutes:D2}:{currentTrack.Duration.Seconds:D2}";
+        sliderPosition.Value = newPosition.TotalSeconds / currentTrack.Duration.TotalSeconds;
     }
 
     private void btnPlay_Click(object sender, RoutedEventArgs e) {
@@ -101,13 +110,15 @@ public partial class MainWindow : Window {
         btnPause.IsEnabled = false;
     }
 
-    private void sliderPosition_PreviewMouseDown(object sender, MouseButtonEventArgs e) { _isUserDraggingSlider = true; }
+    private void sliderPosition_PreviewMouseDown(object sender, MouseButtonEventArgs e) {
+        _isUserDraggingSlider = true;
+    }
 
     private void sliderPosition_PreviewMouseUp(object sender, MouseButtonEventArgs e) {
         _isUserDraggingSlider = false;
-        if (mediaElement.NaturalDuration.HasTimeSpan)
+        if (currentTrack != null)
             mediaElement.Position = TimeSpan.FromSeconds(
-                mediaElement.NaturalDuration.TimeSpan.TotalSeconds * sliderPosition.Value);
+                currentTrack.Duration.TotalSeconds * sliderPosition.Value);
     }
 
     private void ResetPosition() {
@@ -146,7 +157,8 @@ public partial class MainWindow : Window {
             btnPlay.IsEnabled = false;
             _positionTimer.Start();
             mediaElement.Play();
-        } else {
+        }
+        else {
             _positionTimer.Stop();
             mediaElement.Stop();
             btnPlay.IsEnabled = true;
