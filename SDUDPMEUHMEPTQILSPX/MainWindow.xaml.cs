@@ -1,16 +1,8 @@
 ﻿using Microsoft.Win32;
-using System.Text;
+using System.Collections.ObjectModel;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Windows.Threading;
-using Xceed.Wpf.Toolkit;
 
 namespace SDUDPMEUHMEPTQILSPX;
 
@@ -18,7 +10,8 @@ namespace SDUDPMEUHMEPTQILSPX;
 /// Interaction logic for MainWindow.xaml
 /// </summary>
 public partial class MainWindow : Window {
-    public string currentFilePath;
+    public Track? currentTrack;
+    public ObservableCollection<Track> queue = [];
 
     private readonly DispatcherTimer _positionTimer;
     private TimeSpan _lastPosition;
@@ -27,8 +20,9 @@ public partial class MainWindow : Window {
     public MainWindow() {
         double volume = Properties.Settings.Default.Volume;
         InitializeComponent();
+        lbQueue.ItemsSource = queue;
 
-        _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+        _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) }; // Helper timer for position slider updates
         _positionTimer.Tick += OnPositionCheck;
 
         mediaElement.Volume = volume * 0.25;
@@ -37,22 +31,21 @@ public partial class MainWindow : Window {
     }
 
     private void btnSelect_Click(object sender, RoutedEventArgs e) {
-        OpenFileDialog openFileDialog = new();
-        openFileDialog.Filter = "Music files (*.mp3;*.wma;*.wav;*.aac;*.m4a;*.asf;*.mid;*.midi)|*.mp3;*.wma;*.wav;*.aac;*.m4a;*.asf;*.mid;*.midi";
+        OpenFileDialog openFileDialog = new() {
+            Filter = "Music files (*.mp3;*.wma;*.wav;*.aac;*.m4a;*.asf;*.mid;*.midi)|*.mp3;*.wma;*.wav;*.aac;*.m4a;*.asf;*.mid;*.midi"
+        };
         if (openFileDialog.ShowDialog() == true) {
-            ResetMediaElement();
+            //ResetMediaElement();
 
-            currentFilePath = openFileDialog.FileName;
-            lblCurrentFile.Content = currentFilePath;
-            mediaElement.Source = new Uri(currentFilePath);
-
-            mediaElement.Play();
-            mediaElement.Pause();
-
-            btnPlay.IsEnabled = true;
-            btnStop.IsEnabled = true;
+            queue.Add(new Track(openFileDialog.FileName));
+            if (mediaElement.Source == null) {
+                currentTrack = queue[0];
+                queue.RemoveAt(0);
+                SetTrack();
+            }
+            lblQueueCount.Content = queue.Count;
         } else
-            System.Windows.MessageBox.Show("An error occured", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            System.Windows.MessageBox.Show("An error occurred", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
     }
 
     private void mediaElement_MediaOpened(object sender, RoutedEventArgs e) {
@@ -62,13 +55,14 @@ public partial class MainWindow : Window {
     }
 
     private void mediaElement_MediaEnded(object sender, RoutedEventArgs e) {
-        _positionTimer.Stop();
-        mediaElement.Stop();
-        btnPlay.IsEnabled = true;
-        btnPause.IsEnabled = false;
+        //_positionTimer.Stop();
+        //mediaElement.Stop();
+        //btnPlay.IsEnabled = true;
+        //btnPause.IsEnabled = false;
+        NextTrack();
     }
 
-    private void OnPositionCheck(object sender, EventArgs e) {
+    private void OnPositionCheck(object? sender, EventArgs e) {
         if (_isUserDraggingSlider)
             return;
 
@@ -127,7 +121,37 @@ public partial class MainWindow : Window {
         btnPlay.IsEnabled = false;
         btnPause.IsEnabled = false;
         btnStop.IsEnabled = false;
+        lblCurrentFile.Content = "None";
         ResetPosition();
+    }
+
+    private void SetTrack() {
+        lblCurrentFile.Content = currentTrack!.Title;
+        mediaElement.Source = new Uri(currentTrack.Path);
+        mediaElement.Play();
+        mediaElement.Pause();
+
+        btnPlay.IsEnabled = true;
+        btnStop.IsEnabled = true;
+    }
+
+    private void NextTrack() {
+        if (queue.Count > 0) {
+            ResetMediaElement();
+            currentTrack = queue[0];
+            queue.RemoveAt(0);
+            lblQueueCount.Content = queue.Count;
+            SetTrack();
+            btnPause.IsEnabled = true;
+            btnPlay.IsEnabled = false;
+            _positionTimer.Start();
+            mediaElement.Play();
+        } else {
+            _positionTimer.Stop();
+            mediaElement.Stop();
+            btnPlay.IsEnabled = true;
+            btnPause.IsEnabled = false;
+        }
     }
 
     private void sliderVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
@@ -144,5 +168,11 @@ public partial class MainWindow : Window {
             sliderVolume.Value = (intVolume.Value ?? 0) * 0.01;
         Properties.Settings.Default.Volume = (intVolume.Value ?? 0) * 0.01;
         Properties.Settings.Default.Save();
+    }
+
+    private void btnReset_Click(object sender, RoutedEventArgs e) {
+        ResetMediaElement();
+        queue.Clear();
+        lblQueueCount.Content = 0;
     }
 }
