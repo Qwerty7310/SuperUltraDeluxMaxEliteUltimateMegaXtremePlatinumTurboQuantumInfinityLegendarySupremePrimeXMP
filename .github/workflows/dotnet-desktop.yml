@@ -1,4 +1,4 @@
-name: Windows .NET Build
+name: Windows .NET Self-Contained Build
 
 on:
   push:
@@ -25,11 +25,17 @@ jobs:
     - name: Build project
       run: dotnet build --no-restore --configuration Release
 
-    - name: Publish project
-      run: dotnet publish --no-build --configuration Release --output ./publish
+    - name: Publish self-contained single-file build
+      run: dotnet publish --no-build --configuration Release `
+              -r win-x64 `
+              --self-contained true `
+              /p:PublishSingleFile=true `
+              /p:IncludeAllContentForSelfExtract=true `
+              /p:EnableCompressionInSingleFile=true `
+              --output ./publish
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: my-csharp-build
+        name: wpf-app-self-contained
         path: ./publish/
