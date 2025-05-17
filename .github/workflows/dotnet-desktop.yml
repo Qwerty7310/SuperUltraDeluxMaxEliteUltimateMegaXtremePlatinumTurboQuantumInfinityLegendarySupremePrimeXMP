@@ -19,18 +19,19 @@ jobs:
       with:
         dotnet-version: '9.0.x'
 
-    - name: Restore with runtime override
-      run: dotnet restore -r win-x64
+    - name: Restore
+      run: dotnet restore SDUDPMEUHMEPTQILSPX/SDUDPMEUHMEPTQILSPX.csproj -r win-x64
 
-    - name: Build project with runtime override
-      run: dotnet build --no-restore -c Release -r win-x64
+    - name: Build
+      run: dotnet build SDUDPMEUHMEPTQILSPX/SDUDPMEUHMEPTQILSPX.csproj --no-restore -c Release -r win-x64
 
-    - name: Publish self-contained single-file
-      run: dotnet publish -c Release -r win-x64 --self-contained true `
-             /p:PublishSingleFile=true `
-             /p:IncludeAllContentForSelfExtract=true `
-             /p:EnableCompressionInSingleFile=true `
-             --output ./publish
+    - name: Publish
+      run: dotnet publish SDUDPMEUHMEPTQILSPX/SDUDPMEUHMEPTQILSPX.csproj -c Release -r win-x64 --self-contained true `
+        /p:PublishSingleFile=true `
+        /p:IncludeAllContentForSelfExtract=true `
+        /p:EnableCompressionInSingleFile=true `
+        --output ./publish
+
 
     - name: Upload EXE artifact
       uses: actions/upload-artifact@v4
