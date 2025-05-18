@@ -1,6 +1,9 @@
 ﻿using Microsoft.Win32;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 
@@ -9,21 +12,36 @@ namespace SDUDPMEUHMEPTQILSPX;
 /// <summary>
 /// Interaction logic for MainWindow.xaml
 /// </summary>
-public partial class MainWindow : Window {
-    public Track? currentTrack { get; set; }
-    public ObservableCollection<Track> queue = [];
+public partial class MainWindow : Window, INotifyPropertyChanged {
+    private Track? _currentTrack;
+    public Track? CurrentTrack {
+        get => _currentTrack;
+        set {
+            if (_currentTrack != value) {
+                _currentTrack = value;
+                OnPropertyChanged(nameof(CurrentTrack));
 
-    private int _qIndex = 0;
+                if (_currentTrack != null)
+                    SetTrack();
+            }
+        }
+    }
+    public ObservableCollection<Track> Queue { get; } = new();
+
     private readonly DispatcherTimer _positionTimer;
     private TimeSpan _lastPosition;
     private bool _isUserDraggingSlider = false;
+    private bool _isPlaying = false;
 
     private readonly double _volumeCoef = 0.6;
 
     public MainWindow() {
         double volume = Properties.Settings.Default.Volume;
+
         InitializeComponent();
-        lbQueue.ItemsSource = queue;
+        DataContext = this;
+
+        lbQueue.ItemsSource = Queue;
 
         _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) }; // Helper timer for position slider updates
         _positionTimer.Tick += OnPositionCheck;
@@ -33,16 +51,21 @@ public partial class MainWindow : Window {
         sliderVolume.Value = volume;
     }
 
-    private void btnSelect_Click(object sender, RoutedEventArgs e) {
+    public event PropertyChangedEventHandler? PropertyChanged;
+    private void OnPropertyChanged(string name) {
+        PropertyChanged!.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+
+    private void btnAddTrack_Click(object sender, RoutedEventArgs e) {
         OpenFileDialog openFileDialog = new() {
             Filter =
                 "Music files (*.mp3;*.wma;*.wav;*.aac;*.m4a;*.asf;*.mid;*.midi)|*.mp3;*.wma;*.wav;*.aac;*.m4a;*.asf;*.mid;*.midi"
         };
         if (openFileDialog.ShowDialog() == true) {
-            queue.Add(new Track(openFileDialog.FileName));
+            Queue.Add(new Track(openFileDialog.FileName));
             if (mediaElement.Source == null) {
-                currentTrack = queue[0];
-                //queue.RemoveAt(0);
+                CurrentTrack = Queue[0];
+                _positionTimer.Start();
                 SetTrack();
             }
         } else
@@ -50,15 +73,15 @@ public partial class MainWindow : Window {
     }
 
     private void mediaElement_MediaOpened(object sender, RoutedEventArgs e) {
-        if (currentTrack == null) return;
-        if (currentTrack.Duration - mediaElement.NaturalDuration.TimeSpan > TimeSpan.FromSeconds(1)) {
-            MessageBox.Show($"Duration missmatch: {currentTrack.Duration}, {mediaElement.NaturalDuration.TimeSpan}", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-            currentTrack.Duration = mediaElement.NaturalDuration.TimeSpan;
+        if (CurrentTrack == null) return;
+        if (CurrentTrack.Duration - mediaElement.NaturalDuration.TimeSpan > TimeSpan.FromSeconds(1)) {
+            MessageBox.Show($"Duration missmatch: {CurrentTrack.Duration}, {mediaElement.NaturalDuration.TimeSpan}", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            CurrentTrack.Duration = mediaElement.NaturalDuration.TimeSpan;
         }
 
         _lastPosition = mediaElement.Position;
         lblPosition.Content =
-            $"00:00/{currentTrack.Duration.Minutes:D2}:{currentTrack.Duration.Seconds:D2}";
+            $"00:00/{CurrentTrack.Duration.Minutes:D2}:{CurrentTrack.Duration.Seconds:D2}";
     }
 
     private void mediaElement_MediaEnded(object sender, RoutedEventArgs e) {
@@ -77,41 +100,29 @@ public partial class MainWindow : Window {
     }
 
     private void OnPositionChanged(TimeSpan newPosition) {
-        if (currentTrack == null) return;
-        if (currentTrack.Duration.TotalNanoseconds == 0) {
+        if (CurrentTrack == null) return;
+        if (CurrentTrack.Duration.TotalNanoseconds == 0) {
             MessageBox.Show("Zero duration", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
         lblPosition.Content =
-            $"{newPosition.Minutes:D2}:{newPosition.Seconds:D2}/{currentTrack.Duration.Minutes:D2}:{currentTrack.Duration.Seconds:D2}";
-        sliderPosition.Value = newPosition.TotalSeconds / currentTrack.Duration.TotalSeconds;
-        if (newPosition != currentTrack.Duration)
+            $"{newPosition.Minutes:D2}:{newPosition.Seconds:D2}/{CurrentTrack.Duration.Minutes:D2}:{CurrentTrack.Duration.Seconds:D2}";
+        sliderPosition.Value = newPosition.TotalSeconds / CurrentTrack.Duration.TotalSeconds;
+        if (newPosition != CurrentTrack.Duration)
             btnNext.IsEnabled = true;
         if (newPosition != TimeSpan.Zero)
             btnPrev.IsEnabled = true;
     }
 
     private void btnPlay_Click(object sender, RoutedEventArgs e) {
-        mediaElement.Play();
-        _positionTimer.Start();
-        btnPause.IsEnabled = true;
-        btnPlay.IsEnabled = false;
-    }
-
-    private void btnPause_Click(object sender, RoutedEventArgs e) {
-        mediaElement.Pause();
-        btnPlay.IsEnabled = true;
-        btnPause.IsEnabled = false;
-    }
-
-    private void btnStop_Click(object sender, RoutedEventArgs e) {
-        mediaElement.Stop();
-        _positionTimer.Stop();
-
-        ResetPosition();
-
-        btnPlay.IsEnabled = true;
-        btnPause.IsEnabled = false;
+        if (_isPlaying) {
+            mediaElement.Pause();
+            _isPlaying = false;
+        } else {
+            mediaElement.Play();
+            _positionTimer.Start();
+            _isPlaying = true;
+        }
     }
 
     private void sliderPosition_PreviewMouseDown(object sender, MouseButtonEventArgs e) {
@@ -120,9 +131,9 @@ public partial class MainWindow : Window {
 
     private void sliderPosition_PreviewMouseUp(object sender, MouseButtonEventArgs e) {
         _isUserDraggingSlider = false;
-        if (currentTrack != null)
+        if (CurrentTrack != null)
             mediaElement.Position = TimeSpan.FromSeconds(
-                currentTrack.Duration.TotalSeconds * sliderPosition.Value);
+                CurrentTrack.Duration.TotalSeconds * sliderPosition.Value);
     }
 
     private void ResetPosition() {
@@ -134,51 +145,45 @@ public partial class MainWindow : Window {
         _positionTimer.Stop();
         mediaElement.Stop();
         btnPlay.IsEnabled = false;
-        btnPause.IsEnabled = false;
-        btnStop.IsEnabled = false;
-        lblCurrentFile.Content = "None";
         ResetPosition();
     }
 
     private void SetTrack() {
-        lblCurrentFile.Content = currentTrack!.Title;
-        mediaElement.Source = new Uri(currentTrack.Path);
+        mediaElement.Source = new Uri(CurrentTrack.Path);
         mediaElement.Play();
-        mediaElement.Pause();
+        //mediaElement.Pause();
 
         btnPlay.IsEnabled = true;
-        btnStop.IsEnabled = true;
         btnNext.IsEnabled = true;
     }
 
     private void NextTrack() {
-        if (queue.Count > _qIndex + 1) {
+        int currentIndex = Queue.IndexOf(CurrentTrack);
+        if (currentIndex >= 0 && currentIndex < Queue.Count - 1) {
             ResetMediaElement();
-            currentTrack = queue[++_qIndex];
+            CurrentTrack = Queue[currentIndex + 1];
             SetTrack();
-            btnPause.IsEnabled = true;
-            btnPlay.IsEnabled = false;
+            _isPlaying = true;
             _positionTimer.Start();
             mediaElement.Play();
         } else {
             _positionTimer.Stop();
             mediaElement.Stop();
-            btnPlay.IsEnabled = true;
-            btnPause.IsEnabled = false;
+            _isPlaying = false;
 
             btnNext.IsEnabled = false;
-            lblPosition.Content = $"{currentTrack.Duration.Minutes:D2}:{currentTrack.Duration.Seconds:D2}/{currentTrack.Duration.Minutes:D2}:{currentTrack.Duration.Seconds:D2}";
+            lblPosition.Content = $"{CurrentTrack.Duration.Minutes:D2}:{CurrentTrack.Duration.Seconds:D2}/{CurrentTrack.Duration.Minutes:D2}:{CurrentTrack.Duration.Seconds:D2}";
             sliderPosition.Value = 1;
         }
     }
 
     private void PreviousTrack() {
-        if (_qIndex != 0 && _lastPosition.Seconds < 5) {
+        int currentIndex = Queue.IndexOf(CurrentTrack);
+        if (currentIndex != 0 && _lastPosition.Seconds < 5) {
             ResetMediaElement();
-            currentTrack = queue[--_qIndex];
+            CurrentTrack = Queue[currentIndex - 1];
             SetTrack();
-            btnPause.IsEnabled = true;
-            btnPlay.IsEnabled = false;
+            _isPlaying = true;
             _positionTimer.Start();
             mediaElement.Play();
         } else {
@@ -188,16 +193,20 @@ public partial class MainWindow : Window {
 
     private void sliderVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
         mediaElement.Volume = sliderVolume.Value * _volumeCoef;
+
         if (intVolume != null)
             intVolume.Value = (int?)Math.Round(sliderVolume.Value * 100);
+
         Properties.Settings.Default.Volume = sliderVolume.Value;
         Properties.Settings.Default.Save();
     }
 
     private void intVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e) {
-        mediaElement.Volume = (intVolume.Value ?? 0) * 0.001 * _volumeCoef;
+        mediaElement.Volume = (intVolume.Value ?? 0) * 0.01 * _volumeCoef;
+
         if (sliderVolume != null)
             sliderVolume.Value = (intVolume.Value ?? 0) * 0.01;
+
         Properties.Settings.Default.Volume = (intVolume.Value ?? 0) * 0.01;
         Properties.Settings.Default.Save();
     }
@@ -208,5 +217,20 @@ public partial class MainWindow : Window {
 
     private void btnPrev_Click(object sender, RoutedEventArgs e) {
         PreviousTrack();
+    }
+
+    private void miRemove_Click(object sender, RoutedEventArgs e) {
+        if (sender is MenuItem menuItem && menuItem.DataContext is Track track) {
+            if (CurrentTrack == track) {
+                NextTrack();
+            }
+            Queue.Remove(track);
+        }
+    }
+
+    private void lbQueue_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e) {
+        var listBoxItem = ItemsControl.ContainerFromElement(lbQueue, e.OriginalSource as DependencyObject) as ListBoxItem;
+        if (listBoxItem != null)
+            e.Handled = true;
     }
 }

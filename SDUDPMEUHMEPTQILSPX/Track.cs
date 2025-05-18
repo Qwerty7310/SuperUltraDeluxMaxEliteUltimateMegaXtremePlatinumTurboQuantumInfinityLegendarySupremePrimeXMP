@@ -1,4 +1,6 @@
-﻿namespace SDUDPMEUHMEPTQILSPX {
+﻿using System.Collections.Specialized;
+
+namespace SDUDPMEUHMEPTQILSPX {
     public class Track {
         public string Title { get; }
         public string Path { get; }

@@ -35,7 +35,7 @@
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
-                <Button Content="+" Width="40" Height="40" Margin="5"/>
+                <Button x:Name="btnAddTrack" Content="+" Width="40" Height="40" Margin="5" Click="btnAddTrack_Click"/>
                 <Button Content="Create Playlist" Padding="10,5" Margin="5"/>
             </StackPanel>
 
@@ -64,13 +64,10 @@
                 </Grid.ColumnDefinitions>
 
                 <Button x:Name="btnPrev" Grid.Row="0" Grid.Column="0" Content="Previous" Margin="5" Click="btnPrev_Click" IsEnabled="False"/>
-                <Button x:Name="btnStop" Grid.Row="0" Grid.Column="1" Content="Stop" Margin="5" Click="btnStop_Click" IsEnabled="False"/>
-                <Button x:Name="btnPause" Grid.Row="0" Grid.Column="2" Content="Pause" Margin="5" Click="btnPause_Click" IsEnabled="False"/>
                 <Button x:Name="btnPlay" Grid.Row="0" Grid.Column="3" Content="Play" Margin="5" Click="btnPlay_Click" IsEnabled="False"/>
-                <Button x:Name="btnSelect" Grid.Row="0" Grid.Column="4" Content="Select" Margin="5" Click="btnSelect_Click"/>
                 <Button x:Name="btnNext" Grid.Row="0" Grid.Column="5" Content="Next" Margin="5" Click="btnNext_Click" IsEnabled="False"/>
 
-                <Label x:Name="lblCurrentFile" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="12" Content="None" Margin="5"/>
+                <Label x:Name="lblCurrentTrack" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="12" Content="{Binding CurrentTrack.Title}" Margin="5"/>
 
                 <Slider x:Name="sliderPosition" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="8" Margin="5" Maximum="1"
                         IsMoveToPointEnabled="True" PreviewMouseDown="sliderPosition_PreviewMouseDown"
@@ -87,7 +84,22 @@
 
         <StackPanel Grid.Column="2" Margin="10">
             <TextBlock Text="Queue" FontWeight="Bold" FontSize="14" Margin="0 0 0 10"/>
-            <ListBox x:Name="lbQueue" DisplayMemberPath="Title" />
+            <ListBox x:Name="lbQueue"
+                     ItemsSource="{Binding Queue}"
+                     SelectedItem="{Binding CurrentTrack, Mode=TwoWay}"
+                     PreviewMouseRightButtonDown="lbQueue_PreviewMouseRightButtonDown">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Title}">
+                            <TextBlock.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Name="miRemove"  Header="Remove" Click="miRemove_Click"/>
+                                </ContextMenu>
+                            </TextBlock.ContextMenu>
+                        </TextBlock>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
         </StackPanel>
     </Grid>
 </Window>
