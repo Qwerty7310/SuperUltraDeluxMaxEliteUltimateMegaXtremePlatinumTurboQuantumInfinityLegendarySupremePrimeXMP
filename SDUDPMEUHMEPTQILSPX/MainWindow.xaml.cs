@@ -1,7 +1,9 @@
 ﻿using Microsoft.Win32;
+using SDUDPMEUHMEPTQILSPX.Database;
+using SDUDPMEUHMEPTQILSPX.Player;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -28,6 +30,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     }
     public ObservableCollection<Track> Queue { get; } = new();
 
+    public ObservableCollection<Track> AllTracks { get; set; } = new();
+
+    private DBContext _dbContext;
+
     private readonly DispatcherTimer _positionTimer;
     private TimeSpan _lastPosition;
     private bool _isUserDraggingSlider = false;
@@ -41,9 +47,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         InitializeComponent();
         DataContext = this;
 
+        var dbDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "SDUDPMEUHMEPTQILSPX");
+        Directory.CreateDirectory(dbDir);
+        var dbPath = Path.Combine(dbDir, "library.db");
+        _dbContext = new DBContext(dbPath);
+
+        RefreshAllTracks();
+
         lbQueue.ItemsSource = Queue;
 
-        _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) }; // Helper timer for position slider updates
+        _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
         _positionTimer.Tick += OnPositionCheck;
 
         mediaElement.Volume = volume * _volumeCoef;
@@ -59,17 +74,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private void btnAddTrack_Click(object sender, RoutedEventArgs e) {
         OpenFileDialog openFileDialog = new() {
             Filter =
-                "Music files (*.mp3;*.wma;*.wav;*.aac;*.m4a;*.asf;*.mid;*.midi)|*.mp3;*.wma;*.wav;*.aac;*.m4a;*.asf;*.mid;*.midi"
+                "Audio files (*.mp3;*.wma;*.wav;*.aac;*.m4a;*.asf;*.mid;*.midi)|*.mp3;*.wma;*.wav;*.aac;*.m4a;*.asf;*.mid;*.midi",
+            Title = "Select audio files",
+            Multiselect = true
         };
         if (openFileDialog.ShowDialog() == true) {
-            Queue.Add(new Track(openFileDialog.FileName));
-            if (mediaElement.Source == null) {
-                CurrentTrack = Queue[0];
-                _positionTimer.Start();
-                SetTrack();
-            }
-        } else
-            MessageBox.Show("An error occurred", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            foreach (var filePath in openFileDialog.FileNames)
+                _dbContext.Tracks.Insert(TrackRecord.ToRecord(new Track(filePath)));
+            RefreshAllTracks();
+        }
     }
 
     private void mediaElement_MediaOpened(object sender, RoutedEventArgs e) {
@@ -81,7 +94,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
 
         _lastPosition = mediaElement.Position;
         lblPosition.Content =
-            $"00:00/{CurrentTrack.Duration.Minutes:D2}:{CurrentTrack.Duration.Seconds:D2}";
+            $"00:00/{CurrentTrack.DurationString}";
     }
 
     private void mediaElement_MediaEnded(object sender, RoutedEventArgs e) {
@@ -105,8 +118,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             MessageBox.Show("Zero duration", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
+
+        string Format(TimeSpan t) => CurrentTrack.Duration.TotalHours >= 1
+            ? t.ToString(@"h\:mm\:ss")
+            : t.ToString(@"mm\:ss");
         lblPosition.Content =
-            $"{newPosition.Minutes:D2}:{newPosition.Seconds:D2}/{CurrentTrack.Duration.Minutes:D2}:{CurrentTrack.Duration.Seconds:D2}";
+            $"{Format(newPosition)}/{CurrentTrack.DurationString}";
+
         sliderPosition.Value = newPosition.TotalSeconds / CurrentTrack.Duration.TotalSeconds;
         if (newPosition != CurrentTrack.Duration)
             btnNext.IsEnabled = true;
@@ -151,7 +169,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private void SetTrack() {
         mediaElement.Source = new Uri(CurrentTrack.Path);
         mediaElement.Play();
-        //mediaElement.Pause();
 
         btnPlay.IsEnabled = true;
         btnNext.IsEnabled = true;
@@ -219,7 +236,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         PreviousTrack();
     }
 
-    private void miRemove_Click(object sender, RoutedEventArgs e) {
+    private void miQueueRemove_Click(object sender, RoutedEventArgs e) {
         if (sender is MenuItem menuItem && menuItem.DataContext is Track track) {
             if (CurrentTrack == track) {
                 NextTrack();
@@ -232,5 +249,33 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         var listBoxItem = ItemsControl.ContainerFromElement(lbQueue, e.OriginalSource as DependencyObject) as ListBoxItem;
         if (listBoxItem != null)
             e.Handled = true;
+    }
+
+    private void dgLibrary_MouseDoubleClick(object sender, MouseButtonEventArgs e) {
+        if (dgLibrary.SelectedItem is Track selected) {
+            Queue.Add(Track.CloneTrack(selected));
+            if (mediaElement.Source == null) {
+                CurrentTrack = Queue[0];
+                _positionTimer.Start();
+                SetTrack();
+            }
+        }
+    }
+
+    private void RefreshAllTracks() {
+        AllTracks.Clear();
+        var updatedTracks = _dbContext.GetAllTracksAsUiModels();
+        foreach (var track in updatedTracks)
+            AllTracks.Add(track);
+    }
+
+    private void miLibraryRemove_Click(object sender, RoutedEventArgs e) {
+        if (sender is MenuItem mi && mi.DataContext is Track track) {
+            ;
+            var record = _dbContext.GetTrackByPath(track.Path);
+            if (record != null)
+                _dbContext.Tracks.Delete(record.Id);
+            AllTracks.Remove(track);
+        }
     }
 }

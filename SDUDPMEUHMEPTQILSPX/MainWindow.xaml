@@ -15,9 +15,11 @@
         ui:WindowHelper.UseModernWindowStyle="True">
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="Auto" MinWidth="100"/>
+            <ColumnDefinition Width="5"/>
             <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="300"/>
+            <ColumnDefinition Width="5"/>
+            <ColumnDefinition Width="Auto" MinWidth="100"/>
         </Grid.ColumnDefinitions>
 
         <MediaElement x:Name="mediaElement" LoadedBehavior="Manual" UnloadedBehavior="Stop" Visibility="Collapsed"/>
@@ -27,7 +29,15 @@
             <ListBox x:Name="lbPlaylists" DisplayMemberPath="Name" />
         </StackPanel>
 
-        <Grid Grid.Column="1">
+        <GridSplitter Grid.Column="1"
+              Width="5"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch"
+              Background="Gray"
+              ResizeBehavior="PreviousAndNext"
+              ResizeDirection="Columns"/>
+
+        <Grid Grid.Column="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -39,7 +49,23 @@
                 <Button Content="Create Playlist" Padding="10,5" Margin="5"/>
             </StackPanel>
 
-            <Grid Grid.Row="1" Background="WhiteSmoke" Margin="10">
+            <Grid Grid.Row="1" Margin="10">
+                <DataGrid x:Name="dgLibrary"
+                          ItemsSource="{Binding AllTracks}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          IsReadOnly="True"
+                          SelectionMode="Single"
+                          MouseDoubleClick="dgLibrary_MouseDoubleClick"
+                          Margin="10">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="3*" />
+                        <DataGridTextColumn Header="Album" Binding="{Binding Album}" Width="2*" />
+                        <DataGridTextColumn Header="Artist" Binding="{Binding Artist}" Width="2*" />
+                        <DataGridTextColumn Header="Duration" Binding="{Binding DurationString}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
             </Grid>
 
             <Grid Grid.Row="2" Margin="10">
@@ -82,7 +108,16 @@
             </Grid>
         </Grid>
 
-        <StackPanel Grid.Column="2" Margin="10">
+        <GridSplitter Grid.Column="3"
+              Width="5"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch"
+              Background="Gray"
+              ResizeBehavior="PreviousAndNext"
+              ResizeDirection="Columns"/>
+
+
+        <StackPanel Grid.Column="4" Margin="10">
             <TextBlock Text="Queue" FontWeight="Bold" FontSize="14" Margin="0 0 0 10"/>
             <ListBox x:Name="lbQueue"
                      ItemsSource="{Binding Queue}"
@@ -93,7 +128,7 @@
                         <TextBlock Text="{Binding Title}">
                             <TextBlock.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Name="miRemove"  Header="Remove" Click="miRemove_Click"/>
+                                    <MenuItem Name="miRemove"  Header="Remove" Click="miQueueRemove_Click"/>
                                 </ContextMenu>
                             </TextBlock.ContextMenu>
                         </TextBlock>
