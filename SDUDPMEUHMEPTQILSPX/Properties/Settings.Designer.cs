@@ -25,10 +25,10 @@ namespace SDUDPMEUHMEPTQILSPX.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0.5")]
-        public double Volume {
+        [global::System.Configuration.DefaultSettingValueAttribute("50")]
+        public int Volume {
             get {
-                return ((double)(this["Volume"]));
+                return ((int)(this["Volume"]));
             }
             set {
                 this["Volume"] = value;

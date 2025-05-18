@@ -15,9 +15,13 @@
 
 	<ItemGroup>
 		<PackageReference Include="Extended.Wpf.Toolkit" Version="4.7.25104.5739" />
+		<PackageReference Include="LibVLCSharp" Version="3.9.3" />
+		<PackageReference Include="LibVLCSharp.WPF" Version="3.9.3" />
 		<PackageReference Include="LiteDB" Version="5.0.21" />
 		<PackageReference Include="ModernWpfUI" Version="0.9.6" />
 		<PackageReference Include="TagLibSharp" Version="2.3.0" />
+		<PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.21" />
+		<PackageReference Include="YoutubeExplode" Version="6.5.4" />
 	</ItemGroup>
 
 	<ItemGroup>

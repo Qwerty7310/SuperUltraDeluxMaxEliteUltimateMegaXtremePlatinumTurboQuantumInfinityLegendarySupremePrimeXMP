@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿using LibVLCSharp.Shared;
+using Microsoft.Win32;
 using SDUDPMEUHMEPTQILSPX.Database;
 using SDUDPMEUHMEPTQILSPX.Player;
 using System.Collections.ObjectModel;
@@ -11,9 +12,6 @@ using System.Windows.Threading;
 
 namespace SDUDPMEUHMEPTQILSPX;
 
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
 public partial class MainWindow : Window, INotifyPropertyChanged {
     private Track? _currentTrack;
     public Track? CurrentTrack {
@@ -34,47 +32,75 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
 
     private DBContext _dbContext;
 
-    private readonly DispatcherTimer _positionTimer;
-    private TimeSpan _lastPosition;
-    private bool _isUserDraggingSlider = false;
-    private bool _isPlaying = false;
+    private LibVLC _libVLC;
+    private MediaPlayer _mediaPlayer;
 
+    private bool _isUserDraggingSlider = false;
     private readonly double _volumeCoef = 0.6;
 
     public MainWindow() {
-        double volume = Properties.Settings.Default.Volume;
+        int volume = Properties.Settings.Default.Volume;
 
         InitializeComponent();
+        Core.Initialize();
         DataContext = this;
 
+        dgLibrary.LoadingRow += (s, e) => {
+            var row = e.Row;
+            var menu = new ContextMenu();
+
+            var addToQueue = new MenuItem { Header = "Add to queue" };
+            var removeItem = new MenuItem { Header = "Remove from library" };
+
+            addToQueue.Click += AddToQueue;
+            removeItem.Click += RemoveFromLibrary;
+
+            menu.Items.Add(addToQueue);
+            menu.Items.Add(removeItem);
+            row.ContextMenu = menu;
+        };
+
+        _libVLC = new LibVLC();
+        _mediaPlayer = new MediaPlayer(_libVLC);
+        videoView.MediaPlayer = _mediaPlayer;
+
+        _mediaPlayer.EndReached += OnMediaEnded;
+        _mediaPlayer.TimeChanged += OnPositionChanged;
+
         var dbDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "SDUDPMEUHMEPTQILSPX");
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "SDUDPMEUHMEPTQILSPX");
         Directory.CreateDirectory(dbDir);
         var dbPath = Path.Combine(dbDir, "library.db");
         _dbContext = new DBContext(dbPath);
 
         RefreshAllTracks();
-
         lbQueue.ItemsSource = Queue;
 
-        _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
-        _positionTimer.Tick += OnPositionCheck;
-
-        mediaElement.Volume = volume * _volumeCoef;
-        intVolume.Value = (int?)Math.Round(volume * 100);
+        _mediaPlayer.Volume = volume;
+        intVolume.Value = volume;
         sliderVolume.Value = volume;
+    }
+
+    protected override void OnClosing(CancelEventArgs e) {
+        base.OnClosing(e);
+
+        _mediaPlayer.TimeChanged -= OnPositionChanged;
+        _mediaPlayer.EndReached -= OnMediaEnded;
+
+        _mediaPlayer.Dispose();
+        _libVLC.Dispose();
+        _dbContext.Dispose();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
     private void OnPropertyChanged(string name) {
-        PropertyChanged!.Invoke(this, new PropertyChangedEventArgs(name));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
     private void btnAddTrack_Click(object sender, RoutedEventArgs e) {
         OpenFileDialog openFileDialog = new() {
-            Filter =
-                "Audio files (*.mp3;*.wma;*.wav;*.aac;*.m4a;*.asf;*.mid;*.midi)|*.mp3;*.wma;*.wav;*.aac;*.m4a;*.asf;*.mid;*.midi",
+            Filter = "Audio files (*.mp3;*.wav;*.aac;*.m4a;*.wma;*.flac;*.ogg;*.opus;*.webm;*.mid;*.midi)|*.mp3;*.wav;*.aac;*.m4a;*.wma;*.flac;*.ogg;*.opus;*.webm;*.mid;*.midi",
             Title = "Select audio files",
             Multiselect = true
         };
@@ -85,61 +111,39 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         }
     }
 
-    private void mediaElement_MediaOpened(object sender, RoutedEventArgs e) {
-        if (CurrentTrack == null) return;
-        if (CurrentTrack.Duration - mediaElement.NaturalDuration.TimeSpan > TimeSpan.FromSeconds(1)) {
-            MessageBox.Show($"Duration missmatch: {CurrentTrack.Duration}, {mediaElement.NaturalDuration.TimeSpan}", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-            CurrentTrack.Duration = mediaElement.NaturalDuration.TimeSpan;
-        }
-
-        _lastPosition = mediaElement.Position;
-        lblPosition.Content =
-            $"00:00/{CurrentTrack.DurationString}";
+    private void OnMediaEnded(object sender, EventArgs e) {
+        Dispatcher.Invoke(() => NextTrack());
     }
 
-    private void mediaElement_MediaEnded(object sender, RoutedEventArgs e) {
-        NextTrack();
-    }
+    private void OnPositionChanged(object sender, MediaPlayerTimeChangedEventArgs e) {
+        Dispatcher.Invoke(() => {
+            if (CurrentTrack == null || _isUserDraggingSlider) return;
+            if (CurrentTrack.Duration.TotalNanoseconds == 0) {
+                MessageBox.Show("Zero duration", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
 
-    private void OnPositionCheck(object? sender, EventArgs e) {
-        if (_isUserDraggingSlider)
-            return;
+            string Format(TimeSpan t) => CurrentTrack.Duration.TotalHours >= 1
+                ? t.ToString(@"h\:mm\:ss")
+                : t.ToString(@"mm\:ss");
 
-        var current = mediaElement.Position;
-        if (current != _lastPosition) {
-            OnPositionChanged(current);
-            _lastPosition = current;
-        }
-    }
+            var currentTime = TimeSpan.FromMilliseconds(e.Time);
+            lblPosition.Content = $"{Format(currentTime)}/{CurrentTrack.DurationString}";
 
-    private void OnPositionChanged(TimeSpan newPosition) {
-        if (CurrentTrack == null) return;
-        if (CurrentTrack.Duration.TotalNanoseconds == 0) {
-            MessageBox.Show("Zero duration", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            return;
-        }
+            sliderPosition.Value = currentTime.TotalSeconds / CurrentTrack.Duration.TotalSeconds;
 
-        string Format(TimeSpan t) => CurrentTrack.Duration.TotalHours >= 1
-            ? t.ToString(@"h\:mm\:ss")
-            : t.ToString(@"mm\:ss");
-        lblPosition.Content =
-            $"{Format(newPosition)}/{CurrentTrack.DurationString}";
-
-        sliderPosition.Value = newPosition.TotalSeconds / CurrentTrack.Duration.TotalSeconds;
-        if (newPosition != CurrentTrack.Duration)
-            btnNext.IsEnabled = true;
-        if (newPosition != TimeSpan.Zero)
-            btnPrev.IsEnabled = true;
+            if (e.Time != CurrentTrack.Duration.TotalMilliseconds)
+                btnNext.IsEnabled = true;
+            if (e.Time != 0)
+                btnPrev.IsEnabled = true;
+        });
     }
 
     private void btnPlay_Click(object sender, RoutedEventArgs e) {
-        if (_isPlaying) {
-            mediaElement.Pause();
-            _isPlaying = false;
+        if (_mediaPlayer.IsPlaying) {
+            _mediaPlayer.Pause();
         } else {
-            mediaElement.Play();
-            _positionTimer.Start();
-            _isPlaying = true;
+            _mediaPlayer.Play();
         }
     }
 
@@ -150,8 +154,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private void sliderPosition_PreviewMouseUp(object sender, MouseButtonEventArgs e) {
         _isUserDraggingSlider = false;
         if (CurrentTrack != null)
-            mediaElement.Position = TimeSpan.FromSeconds(
-                CurrentTrack.Duration.TotalSeconds * sliderPosition.Value);
+            _mediaPlayer.Time = (long)(CurrentTrack.Duration.TotalMilliseconds * sliderPosition.Value);
     }
 
     private void ResetPosition() {
@@ -160,15 +163,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     }
 
     private void ResetMediaElement() {
-        _positionTimer.Stop();
-        mediaElement.Stop();
+        _mediaPlayer.Stop();
         btnPlay.IsEnabled = false;
         ResetPosition();
     }
 
     private void SetTrack() {
-        mediaElement.Source = new Uri(CurrentTrack.Path);
-        mediaElement.Play();
+        if (_mediaPlayer.IsPlaying)
+            _mediaPlayer.Stop();
+
+        using var media = new Media(_libVLC, CurrentTrack.Path, FromType.FromPath);
+        _mediaPlayer.Play(media);
 
         btnPlay.IsEnabled = true;
         btnNext.IsEnabled = true;
@@ -180,14 +185,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             ResetMediaElement();
             CurrentTrack = Queue[currentIndex + 1];
             SetTrack();
-            _isPlaying = true;
-            _positionTimer.Start();
-            mediaElement.Play();
         } else {
-            _positionTimer.Stop();
-            mediaElement.Stop();
-            _isPlaying = false;
-
+            _mediaPlayer.Stop();
             btnNext.IsEnabled = false;
             lblPosition.Content = $"{CurrentTrack.Duration.Minutes:D2}:{CurrentTrack.Duration.Seconds:D2}/{CurrentTrack.Duration.Minutes:D2}:{CurrentTrack.Duration.Seconds:D2}";
             sliderPosition.Value = 1;
@@ -196,35 +195,33 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
 
     private void PreviousTrack() {
         int currentIndex = Queue.IndexOf(CurrentTrack);
-        if (currentIndex != 0 && _lastPosition.Seconds < 5) {
+        if (currentIndex != 0 && _mediaPlayer.Time < 5000) {
             ResetMediaElement();
             CurrentTrack = Queue[currentIndex - 1];
             SetTrack();
-            _isPlaying = true;
-            _positionTimer.Start();
-            mediaElement.Play();
+            _mediaPlayer.Play();
         } else {
-            mediaElement.Position = TimeSpan.Zero;
+            _mediaPlayer.Time = 0;
         }
     }
 
     private void sliderVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-        mediaElement.Volume = sliderVolume.Value * _volumeCoef;
+        if (_mediaPlayer != null) _mediaPlayer.Volume = (int)sliderVolume.Value;
 
         if (intVolume != null)
-            intVolume.Value = (int?)Math.Round(sliderVolume.Value * 100);
+            intVolume.Value = (int)sliderVolume.Value;
 
-        Properties.Settings.Default.Volume = sliderVolume.Value;
+        Properties.Settings.Default.Volume = (int)sliderVolume.Value;
         Properties.Settings.Default.Save();
     }
 
     private void intVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e) {
-        mediaElement.Volume = (intVolume.Value ?? 0) * 0.01 * _volumeCoef;
+        if (_mediaPlayer != null) _mediaPlayer.Volume = (intVolume.Value ?? 0);
 
         if (sliderVolume != null)
-            sliderVolume.Value = (intVolume.Value ?? 0) * 0.01;
+            sliderVolume.Value = intVolume.Value ?? 0;
 
-        Properties.Settings.Default.Volume = (intVolume.Value ?? 0) * 0.01;
+        Properties.Settings.Default.Volume = intVolume.Value ?? 0;
         Properties.Settings.Default.Save();
     }
 
@@ -261,7 +258,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             Queue.Add(Track.CloneTrack(selected));
             if (CurrentTrack == null) {
                 CurrentTrack = Queue[0];
-                _positionTimer.Start();
                 SetTrack();
             }
         }
@@ -274,13 +270,31 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             AllTracks.Add(track);
     }
 
-    private void miLibraryRemove_Click(object sender, RoutedEventArgs e) {
+    private void RemoveFromLibrary(object sender, RoutedEventArgs e) {
         if (sender is MenuItem mi && mi.DataContext is Track track) {
-            ;
             var record = _dbContext.GetTrackByPath(track.Path);
             if (record != null)
                 _dbContext.Tracks.Delete(record.Id);
             AllTracks.Remove(track);
+        }
+    }
+
+    private void AddToQueue(object sender, RoutedEventArgs e) {
+        if (dgLibrary.SelectedItem is Track selected) {
+            Queue.Add(Track.CloneTrack(selected));
+            if (CurrentTrack == null) {
+                CurrentTrack = Queue[0];
+                SetTrack();
+            }
+        }
+    }
+
+    private void btnDownload_Click(object sender, RoutedEventArgs e) {
+        var dialog = new DownloadDialog { Owner = this };
+        dialog.ShowDialog();
+        if (dialog.DialogResult == true && dialog.DownloadedTrack is Track track) {
+            _dbContext.Tracks.Insert(TrackRecord.ToRecord(track));
+            RefreshAllTracks();
         }
     }
 }
