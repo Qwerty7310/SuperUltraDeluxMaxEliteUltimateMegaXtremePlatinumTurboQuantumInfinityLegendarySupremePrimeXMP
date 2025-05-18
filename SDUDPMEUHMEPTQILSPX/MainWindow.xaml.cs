@@ -242,6 +242,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 NextTrack();
             }
             Queue.Remove(track);
+
+            if (Queue.Count == 0) {
+                ResetMediaElement();
+                CurrentTrack = null;
+            }
         }
     }
 
@@ -254,7 +259,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     private void dgLibrary_MouseDoubleClick(object sender, MouseButtonEventArgs e) {
         if (dgLibrary.SelectedItem is Track selected) {
             Queue.Add(Track.CloneTrack(selected));
-            if (mediaElement.Source == null) {
+            if (CurrentTrack == null) {
                 CurrentTrack = Queue[0];
                 _positionTimer.Start();
                 SetTrack();
