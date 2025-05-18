@@ -1,4 +1,4 @@
-name: Windows .NET Build
+name: Windows .NET Self-Contained EXE
 
 on:
   push:
@@ -17,19 +17,24 @@ jobs:
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: '9.0.x'
 
-    - name: Restore dependencies
-      run: dotnet restore
+    - name: Restore
+      run: dotnet restore SDUDPMEUHMEPTQILSPX/SDUDPMEUHMEPTQILSPX.csproj -r win-x64
 
-    - name: Build project
-      run: dotnet build --no-restore --configuration Release
+    - name: Build
+      run: dotnet build SDUDPMEUHMEPTQILSPX/SDUDPMEUHMEPTQILSPX.csproj --no-restore -c Release -r win-x64
 
-    - name: Publish project
-      run: dotnet publish --no-build --configuration Release --output ./publish
+    - name: Publish
+      run: dotnet publish SDUDPMEUHMEPTQILSPX/SDUDPMEUHMEPTQILSPX.csproj -c Release -r win-x64 --self-contained true `
+        /p:PublishSingleFile=true `
+        /p:IncludeAllContentForSelfExtract=true `
+        /p:EnableCompressionInSingleFile=true `
+        --output ./publish
 
-    - name: Upload build artifacts
+
+    - name: Upload EXE artifact
       uses: actions/upload-artifact@v4
       with:
-        name: my-csharp-build
+        name: my-wpf-app
         path: ./publish/
