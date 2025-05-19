@@ -373,6 +373,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         if (dialog.DialogResult == true && dialog.DownloadedTrack is Track track) {
             _dbContext.InsertTrack(track);
             RefreshAllTracks();
+            if(_currentPlaylist == null)
+                DisplayedTracks.Add(track);
         }
     }
 
