@@ -4,9 +4,11 @@ using SDUDPMEUHMEPTQILSPX.Database;
 using SDUDPMEUHMEPTQILSPX.Player;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
 
@@ -15,6 +17,7 @@ namespace SDUDPMEUHMEPTQILSPX;
 public partial class MainWindow : Window, INotifyPropertyChanged {
     private Track? _currentTrack;
     private Playlist? _currentPlaylist;
+
     public Track? CurrentTrack {
         get => _currentTrack;
         set {
@@ -27,6 +30,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             }
         }
     }
+
     public ObservableCollection<Track> Queue { get; } = new();
 
     public ObservableCollection<Track> AllTracks { get; set; } = new();
@@ -74,13 +78,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         if (!string.IsNullOrEmpty(lastPath)) {
             var record = _dbContext.GetTrackByPath(lastPath);
             if (record != null) {
-                var track = Track.FromRecord(record,
+                var track = Track.FromRecord(
+                    record,
                     record.ArtistId.HasValue ? _dbContext.Artists.FindById(record.ArtistId.Value)?.Name : null,
                     record.AlbumId.HasValue ? _dbContext.Albums.FindById(record.AlbumId.Value)?.Title : null);
 
                 Queue.Add(track);
                 CurrentTrack = track;
-                SetTrack();
+                SetTrack(false);
             }
         }
 
@@ -101,57 +106,67 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
-    private void OnPropertyChanged(string name) {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-    }
+    private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
 
     private void AddTrackToLibrary(object sender, RoutedEventArgs e) {
         OpenFileDialog openFileDialog = new() {
-            Filter = "Audio files (*.mp3;*.wav;*.aac;*.m4a;*.wma;*.flac;*.ogg;*.opus;*.webm;*.mid;*.midi)|*.mp3;*.wav;*.aac;*.m4a;*.wma;*.flac;*.ogg;*.opus;*.webm;*.mid;*.midi",
+            Filter =
+                "Audio files (*.mp3;*.wav;*.aac;*.m4a;*.wma;*.flac;*.ogg;*.opus;*.webm;*.mid;*.midi)|*.mp3;*.wav;*.aac;*.m4a;*.wma;*.flac;*.ogg;*.opus;*.webm;*.mid;*.midi",
             Title = "Select audio files",
             Multiselect = true
         };
         if (openFileDialog.ShowDialog() == true) {
             foreach (var filePath in openFileDialog.FileNames) {
+                if (AllTracks.Any(t => t.Path == filePath))
+                    continue;
+
                 Track newTrack = new Track(filePath);
                 _dbContext.InsertTrack(newTrack);
-                if (_currentPlaylist == null)
-                    DisplayedTracks.Add(newTrack);
+                DisplayedTracks.Add(newTrack);
+                if (_currentPlaylist != null) {
+                    _currentPlaylist.TrackList.Add(newTrack);
+                    var record = _dbContext.GetTrackByPath(newTrack.Path);
+                    if (record != null)
+                        _dbContext.AddTrackToPlaylist(record.Id, _currentPlaylist.Name);
+                }
             }
             RefreshAllTracks();
         }
     }
 
     private void OnMediaEnded(object sender, EventArgs e) {
-        Dispatcher.BeginInvoke(() => {
-            if (_isRepeatEnabled && CurrentTrack != null) {
-                ResetMediaElement();
-                SetTrack();
-            } else {
-                NextTrack();
-            }
-        });
+        Dispatcher.BeginInvoke(
+            () => {
+                if (_isRepeatEnabled && CurrentTrack != null) {
+                    ResetMediaElement();
+                    SetTrack();
+                } else {
+                    NextTrack();
+                }
+            });
     }
 
     private void OnPositionChanged(object sender, MediaPlayerTimeChangedEventArgs e) {
-        Dispatcher.Invoke(() => {
-            if (CurrentTrack == null || _isUserDraggingSlider) return;
+        Dispatcher.Invoke(
+            () => {
+                if (CurrentTrack == null || _isUserDraggingSlider)
+                    return;
 
-            string Format(TimeSpan t) => CurrentTrack.Duration.TotalHours >= 1
-                ? t.ToString(@"h\:mm\:ss")
-                : t.ToString(@"mm\:ss");
+                string Format(TimeSpan t) => CurrentTrack.Duration.TotalHours >= 1
+                    ? t.ToString(@"h\:mm\:ss")
+                    : t.ToString(@"mm\:ss");
 
-            var currentTime = TimeSpan.FromMilliseconds(e.Time);
-            lblPosition.Content = $"{Format(currentTime)}/{CurrentTrack.DurationString}";
+                var currentTime = TimeSpan.FromMilliseconds(e.Time);
+                lblPosition.Content = $"{Format(currentTime)}/{CurrentTrack.DurationString}";
 
-            if (CurrentTrack.Duration != TimeSpan.Zero)
-                sliderPosition.Value = currentTime.TotalSeconds / CurrentTrack.Duration.TotalSeconds;
+                if (CurrentTrack.Duration != TimeSpan.Zero)
+                    sliderPosition.Value = currentTime.TotalSeconds / CurrentTrack.Duration.TotalSeconds;
 
-            if (e.Time != CurrentTrack.Duration.TotalMilliseconds)
-                btnNext.IsEnabled = true;
-            if (e.Time != 0)
-                btnPrev.IsEnabled = true;
-        });
+                if (e.Time != CurrentTrack.Duration.TotalMilliseconds)
+                    btnNext.IsEnabled = true;
+                if (e.Time != 0)
+                    btnPrev.IsEnabled = true;
+            });
     }
 
     private void btnPlay_Click(object sender, RoutedEventArgs e) {
@@ -164,9 +179,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         }
     }
 
-    private void sliderPosition_PreviewMouseDown(object sender, MouseButtonEventArgs e) {
-        _isUserDraggingSlider = true;
-    }
+    private void sliderPosition_PreviewMouseDown(object sender, MouseButtonEventArgs e) { _isUserDraggingSlider = true; }
 
     private void sliderPosition_PreviewMouseUp(object sender, MouseButtonEventArgs e) {
         _isUserDraggingSlider = false;
@@ -191,22 +204,35 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         }
     }
 
-    private void SetTrack() {
+    private void SetTrack(bool autoplay = true) {
         try {
             ResetMediaElement();
 
             var media = new Media(_libVLC, CurrentTrack.Path, FromType.FromPath);
 
             _mediaPlayer.Play(media);
+            btnPlay.Content = "Pause";
+            if (!autoplay) {
+                void handler(object? s, EventArgs e) {
+                    _mediaPlayer.Pause();
+                    _mediaPlayer.Playing -= handler;
+                }
+
+                _mediaPlayer.Playing += handler;
+                btnPlay.Content = "Play";
+            }
 
             Properties.Settings.Default.LastTrackPath = CurrentTrack?.Path;
             Properties.Settings.Default.Save();
 
             btnPlay.IsEnabled = true;
             btnNext.IsEnabled = true;
-            btnPlay.Content = "Pause";
         } catch (Exception ex) {
-            MessageBox.Show($"Failed to play: {ex.Message}", "Playback Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(
+                $"Failed to play: {ex.Message}",
+                "Playback Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
     }
 
@@ -239,7 +265,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     }
 
     private void sliderVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-        if (_mediaPlayer != null) _mediaPlayer.Volume = (int)sliderVolume.Value;
+        if (_mediaPlayer != null)
+            _mediaPlayer.Volume = (int)sliderVolume.Value;
 
         if (intVolume != null)
             intVolume.Value = (int)sliderVolume.Value;
@@ -249,7 +276,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
     }
 
     private void intVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e) {
-        if (_mediaPlayer != null) _mediaPlayer.Volume = (intVolume.Value ?? 0);
+        if (_mediaPlayer != null)
+            _mediaPlayer.Volume = (intVolume.Value ?? 0);
 
         if (sliderVolume != null)
             sliderVolume.Value = intVolume.Value ?? 0;
@@ -258,13 +286,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         Properties.Settings.Default.Save();
     }
 
-    private void btnNext_Click(object sender, RoutedEventArgs e) {
-        NextTrack();
-    }
+    private void btnNext_Click(object sender, RoutedEventArgs e) { NextTrack(); }
 
-    private void btnPrev_Click(object sender, RoutedEventArgs e) {
-        PreviousTrack();
-    }
+    private void btnPrev_Click(object sender, RoutedEventArgs e) { PreviousTrack(); }
 
     private void miQueueRemove_Click(object sender, RoutedEventArgs e) {
         if (sender is MenuItem menuItem && menuItem.DataContext is Track track) {
@@ -323,9 +347,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             var record = _dbContext.GetTrackByPath(track.Path);
             if (record != null)
                 _dbContext.Tracks.Delete(record.Id);
+            if (CurrentTrack?.Path == track.Path)
+                NextTrack();
             AllTracks.Remove(track);
-            if (_currentPlaylist == null)
-                DisplayedTracks.Remove(track);
+            DisplayedTracks.Remove(track);
+            RefreshAllTracks();
+            if (_currentPlaylist != null)
+                _currentPlaylist.TrackList.Remove(track);
         }
     }
 
@@ -370,6 +398,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             return;
 
         _currentPlaylist = selected;
+        lblViewHeader.Text = $"📂 Playlist: {selected.Name}";
         btnAddTracksPlaylist.Visibility = Visibility.Visible;
         DisplayedTracks.Clear();
         foreach (var track in selected.TrackList)
@@ -378,6 +407,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
 
     private void OpenHome(object sender, RoutedEventArgs e) {
         _currentPlaylist = null;
+        lblViewHeader.Text = "🏠 Home";
         btnAddTracksPlaylist.Visibility = Visibility.Collapsed;
         DisplayedTracks.Clear();
         foreach (var track in AllTracks)
@@ -435,7 +465,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                     if (record != null) {
                         _dbContext.AddTrackToPlaylist(record.Id, playlist.Name);
                         RefreshAllPlaylists();
-                        MessageBox.Show($"Added to playlist: {playlist.Name}", "Playlist", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
                 };
                 addToPlaylist.Items.Add(item);
