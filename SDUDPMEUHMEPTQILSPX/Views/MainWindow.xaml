@@ -18,17 +18,34 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto" MinWidth="100"/>
             <ColumnDefinition Width="5"/>
-            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*" MinWidth="600"/>
             <ColumnDefinition Width="5"/>
             <ColumnDefinition Width="Auto" MinWidth="100"/>
         </Grid.ColumnDefinitions>
 
         <vlc:VideoView x:Name="videoView" Visibility="Collapsed" />
 
-        <StackPanel Grid.Column="0" Margin="10">
+        <StackPanel Grid.Column="0" Margin="10" Width="200">
             <TextBlock Text="Library" FontWeight="Bold" FontSize="14" Margin="0 0 0 10"/>
-            <ListBox x:Name="lbPlaylists" DisplayMemberPath="Name" />
+            <Button x:Name="btnHome" Content="🏠 Home" Margin="0 0 0 10" Click="OpenHome"/>
+
+            <Expander Header="Playlists" IsExpanded="True" Margin="0 0 0 10">
+                <ListBox x:Name="lbPlaylists" ItemsSource="{Binding AllPlaylists}" MouseDoubleClick="OpenPlaylist">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Name}">
+                                <TextBlock.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Delete" Click="DeletePlaylist"/>
+                                    </ContextMenu>
+                                </TextBlock.ContextMenu>
+                            </TextBlock>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Expander>
         </StackPanel>
+
 
         <GridSplitter Grid.Column="1"
               Width="5"
@@ -46,20 +63,22 @@
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
-                <Button x:Name="btnAddTrack" Content="Add track" Margin="5" Click="btnAddTrack_Click"/>
-                <Button x:Name="btnCreatePlaylist" Content="Create Playlist" Padding="10,5" Margin="5"/>
-                <Button x:Name="btnDownload" Content="Download from YouTube" Padding="10,5" Margin="5" Click="btnDownload_Click"/>
+                <Button x:Name="btnAddTrack" Content="Add track" Margin="5" Click="AddTrackToLibrary"/>
+                <Button x:Name="btnCreatePlaylist" Content="Create Playlist" Padding="10,5" Margin="5" Click="CreatePlaylist"/>
+                <Button x:Name="btnDownload" Content="Download from YouTube" Padding="10,5" Margin="5" Click="DownloadYoutube"/>
+                <Button x:Name="btnAddTracksPlaylist" Content="Add tracks to the playlist" Padding="10,5" Margin="5" Click="AddTracksToPlaylist" Visibility="Collapsed"/>
             </StackPanel>
 
             <Grid Grid.Row="1" Margin="10">
                 <DataGrid x:Name="dgLibrary"
-                          ItemsSource="{Binding AllTracks}"
+                          ItemsSource="{Binding DisplayedTracks}"
                           AutoGenerateColumns="False"
                           CanUserAddRows="False"
                           CanUserDeleteRows="False"
                           IsReadOnly="True"
                           SelectionMode="Single"
                           MouseDoubleClick="dgLibrary_MouseDoubleClick"
+                          ContextMenuOpening="dgLibrary_ContextMenuOpening"
                           Margin="10">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="3*" />
@@ -92,8 +111,9 @@
                 </Grid.ColumnDefinitions>
 
                 <Button x:Name="btnPrev" Grid.Row="0" Grid.Column="0" Content="Previous" Margin="5" Click="btnPrev_Click" IsEnabled="False"/>
-                <Button x:Name="btnPlay" Grid.Row="0" Grid.Column="3" Content="Play" Margin="5" Click="btnPlay_Click" IsEnabled="False"/>
-                <Button x:Name="btnNext" Grid.Row="0" Grid.Column="5" Content="Next" Margin="5" Click="btnNext_Click" IsEnabled="False"/>
+                <Button x:Name="btnPlay" Grid.Row="0" Grid.Column="1" Content="Play" Margin="5" Click="btnPlay_Click" IsEnabled="False"/>
+                <Button x:Name="btnNext" Grid.Row="0" Grid.Column="2" Content="Next" Margin="5" Click="btnNext_Click" IsEnabled="False"/>
+                <Button x:Name="btnRepeat" Grid.Row="0" Grid.Column="3" Content="🔁" Margin="5" Click="btnRepeat_Click" Opacity="0.5"/>
 
                 <Label x:Name="lblCurrentTrack" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="12" Content="{Binding CurrentTrack.Title}" Margin="5"/>
 

@@ -9,13 +9,13 @@ namespace SDUDPMEUHMEPTQILSPX.Database {
         public int? AlbumId { get; set; }
         public TimeSpan Duration { get; set; }
 
-        public static TrackRecord ToRecord(Track track) {
+        public static TrackRecord ToRecord(Track track, int? artistId = null, int? albumId = null) {
             return new TrackRecord {
                 Title = track.Title,
                 Path = track.Path,
                 Duration = track.Duration,
-                //ArtistId = track.Artist?.Id,
-                //AlbumId = track.Album?.Id
+                ArtistId = artistId,
+                AlbumId = albumId
             };
         }
     }

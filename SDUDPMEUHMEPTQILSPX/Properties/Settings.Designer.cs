@@ -34,5 +34,17 @@ namespace SDUDPMEUHMEPTQILSPX.Properties {
                 this["Volume"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string LastTrackPath {
+            get {
+                return ((string)(this["LastTrackPath"]));
+            }
+            set {
+                this["LastTrackPath"] = value;
+            }
+        }
     }
 }

@@ -7,6 +7,7 @@
             Name = name;
         }
 
+        public Playlist() {}
         public Playlist(string name, List<Track> tracks) {
             Name = name;
             TrackList = tracks;
