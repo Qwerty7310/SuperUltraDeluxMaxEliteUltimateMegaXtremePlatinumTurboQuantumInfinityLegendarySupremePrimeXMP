@@ -9,7 +9,7 @@
         Title="Super Duper Ultra Deluxe Pro Max Elite Ultimate Hyper Mega Extreme Platinum Turbo Quantum Infinity Legendary Supreme Prime X 😎🔥 Music Player™ ® ©" 
         Height="500" 
         Width="1000"
-        MinWidth="100"
+        MinWidth="1000"
         MinHeight="300"
         xmlns:ui="http://schemas.modernwpf.com/2019"
         ui:WindowHelper.UseModernWindowStyle="True"
