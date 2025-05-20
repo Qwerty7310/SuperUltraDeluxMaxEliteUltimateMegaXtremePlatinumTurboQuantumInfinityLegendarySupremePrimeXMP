@@ -9,7 +9,7 @@
         Title="Super Duper Ultra Deluxe Pro Max Elite Ultimate Hyper Mega Extreme Platinum Turbo Quantum Infinity Legendary Supreme Prime X 😎🔥 Music Player™ ® ©" 
         Height="500" 
         Width="1000"
-        MinWidth="1000"
+        MinWidth="1400"
         MinHeight="300"
         xmlns:ui="http://schemas.modernwpf.com/2019"
         ui:WindowHelper.UseModernWindowStyle="True"
@@ -40,7 +40,7 @@
             <TextBlock Grid.Row="0" Text="Library" FontWeight="Bold" FontSize="14" Margin="0 0 0 10"/>
             <Button Grid.Row="1" x:Name="btnHome" Content="🏠 Home" Margin="0 0 0 10" Click="OpenHome"/>
 
-            <Expander Grid.Row="2" Header="Playlists" IsExpanded="True" Margin="0 0 0 10">
+            <Expander Grid.Row="2" Header="📂 Playlists" IsExpanded="True" Margin="0 0 0 10">
                 <ListBox x:Name="lbPlaylists" ItemsSource="{Binding AllPlaylists}" MouseDoubleClick="OpenPlaylist">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
@@ -99,17 +99,20 @@
                            FontWeight="Bold"
                            FontSize="16"
                            VerticalAlignment="Center"
-                           Grid.Column="0" />
+                           Grid.Column="0" 
+                           HorizontalAlignment="Left"
+                           MaxWidth="240"/>
                 
                 <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
-                    <Button x:Name="btnAddTrack" Content="Add new tracks" Margin="5" Click="AddTrackToLibrary"/>
-                    <Button x:Name="btnAddTracksPlaylist" Content="Add tracks to the playlist" Padding="10,5" Margin="5" Click="AddTracksToPlaylist" Visibility="Collapsed"/>
-                    <Button x:Name="btnCreatePlaylist" Content="Create Playlist" Padding="10,5" Margin="5" Click="CreatePlaylist"/>
-                    <Button x:Name="btnDownload" Content="Download from YT" Padding="10,5" Margin="5" Click="DownloadYoutube"/>
+                    <Button x:Name="btnAddTrack" Content="➕🎵 Add new tracks" Margin="5" Click="AddTrackToLibrary"/>
+                    <Button x:Name="btnAddTracksPlaylist" Content="➕🎵 Add tracks to the playlist" Padding="10,5" Margin="5" Click="AddTracksToPlaylist" Visibility="Collapsed"/>
+                    <Button x:Name="btnCreatePlaylist" Content="➕📂 Create Playlist" Padding="10,5" Margin="5" Click="CreatePlaylist"/>
+                    <Button x:Name="btnDownload" Content="🡇 Download from YT" Padding="10,5" Margin="5" Click="DownloadYoutube"/>
                 </StackPanel>
             </Grid>
 
             <Grid Grid.Row="1" Margin="10">
+                <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
                 <DataGrid x:Name="dgLibrary"
                           ItemsSource="{Binding DisplayedTracks}"
                           AutoGenerateColumns="False"
@@ -127,6 +130,7 @@
                         <DataGridTextColumn Header="Duration" Binding="{Binding DurationString}" Width="*"/>
                     </DataGrid.Columns>
                 </DataGrid>
+                </Border>
             </Grid>
 
             <Grid Grid.Row="2" Margin="10">
@@ -146,13 +150,15 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- для 🔊 -->
                     <ColumnDefinition Width="120"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <Button x:Name="btnPrev" Grid.Row="0" Grid.Column="0" Content="Previous" Margin="5" Click="btnPrev_Click" IsEnabled="False"/>
-                <Button x:Name="btnPlay" Grid.Row="0" Grid.Column="1" Content="Play" Margin="5" Click="btnPlay_Click" IsEnabled="False"/>
-                <Button x:Name="btnNext" Grid.Row="0" Grid.Column="2" Content="Next" Margin="5" Click="btnNext_Click" IsEnabled="False"/>
+                <Button x:Name="btnPrev" Grid.Row="0" Grid.Column="0" Content="⏮️ Previous" Margin="5" Click="btnPrev_Click" IsEnabled="False"/>
+                <Button x:Name="btnPlay" Grid.Row="0" Grid.Column="1" Content="▶️ Play" Margin="5" Click="btnPlay_Click" IsEnabled="False"/>
+                <Button x:Name="btnNext" Grid.Row="0" Grid.Column="2" Content="⏭️ Next" Margin="5" Click="btnNext_Click" IsEnabled="False"/>
                 <Button x:Name="btnRepeat" Grid.Row="0" Grid.Column="3" Content="🔁" Margin="5" Click="btnRepeat_Click" Opacity="0.5"/>
 
                 <Slider x:Name="sliderPosition" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="8" Margin="5" Maximum="1"
@@ -161,9 +167,11 @@
 
                 <Label x:Name="lblPosition" Grid.Row="2" Grid.Column="8" Content="00:00/00:00" Margin="5" VerticalAlignment="Center"/>
 
-                <Slider x:Name="sliderVolume" Grid.Row="2" Grid.Column="10" Maximum="100" SmallChange="1"
+                <Label x:Name="speaker" Grid.Row="2" Grid.Column="10" Content="🔉" FontSize="20" Margin="5" VerticalAlignment="Center"/>
+
+                <Slider x:Name="sliderVolume" Grid.Row="2" Grid.Column="11" Maximum="100" SmallChange="1"
                         Value="50" IsMoveToPointEnabled="True" Margin="5" ValueChanged="sliderVolume_ValueChanged"/>
-                <xctk:IntegerUpDown x:Name="intVolume" Grid.Row="2" Grid.Column="11" Increment="1" Minimum="0" Maximum="100"
+                <xctk:IntegerUpDown x:Name="intVolume" Grid.Row="2" Grid.Column="12" Increment="1" Minimum="0" Maximum="100"
                                     Text="50" Margin="15,5,5,5" ValueChanged="intVolume_ValueChanged"/>
             </Grid>
         </Grid>
@@ -183,7 +191,7 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <TextBlock Text="Queue" FontWeight="Bold" FontSize="14" Margin="0 0 0 10"/>
+            <TextBlock Text="📃 Queue" FontWeight="Bold" FontSize="14" Margin="0 0 0 10"/>
 
             <ListBox x:Name="lbQueue"
              Grid.Row="1"
