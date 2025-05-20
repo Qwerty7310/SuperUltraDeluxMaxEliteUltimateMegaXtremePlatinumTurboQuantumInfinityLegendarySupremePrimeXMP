@@ -220,7 +220,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             var media = new Media(_libVLC, CurrentTrack.Path, FromType.FromPath);
 
             _mediaPlayer.Play(media);
-            btnPlay.Content = "Pause";
+            btnPlay.Content = "\u23f8\ufe0f Pause";
             if (!autoplay) {
                 void handler(object? s, EventArgs e) {
                     _mediaPlayer.Pause();
@@ -256,7 +256,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         else {
             _mediaPlayer.Pause();
             _mediaPlayer.Time = 0;
-            btnPlay.Content = "Play";
+            btnPlay.Content = "\u25b6\ufe0f Play";
             btnNext.IsEnabled = false;
             lblPosition.Content =
                 $"{CurrentTrack.Duration.Minutes:D2}:{CurrentTrack.Duration.Seconds:D2}/{CurrentTrack.Duration.Minutes:D2}:{CurrentTrack.Duration.Seconds:D2}";
