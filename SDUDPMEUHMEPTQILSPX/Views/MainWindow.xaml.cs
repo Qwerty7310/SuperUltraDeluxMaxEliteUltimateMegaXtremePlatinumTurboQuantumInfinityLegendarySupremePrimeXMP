@@ -144,8 +144,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
                 if (_isRepeatEnabled && CurrentTrack != null) {
                     ResetMediaElement();
                     SetTrack();
-                }
-                else {
+                } else {
                     NextTrack();
                 }
             });
@@ -178,8 +177,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         if (_mediaPlayer.IsPlaying) {
             _mediaPlayer.Pause();
             btnPlay.Content = "\u25b6\ufe0f Play";
-        }
-        else {
+        } else {
             _mediaPlayer.Play();
             btnPlay.Content = "\u23f8\ufe0f Pause";
         }
@@ -207,8 +205,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             _mediaPlayer.Media?.Dispose();
             _mediaPlayer.Media = null;
             ResetPosition();
-        }
-        catch {
+        } catch {
             // silent fail to prevent locking
         }
     }
@@ -236,8 +233,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
 
             btnPlay.IsEnabled = true;
             btnNext.IsEnabled = true;
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             MessageBox.Show(
                 $"Failed to play: {ex.Message}",
                 "Playback Error",
@@ -252,8 +248,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             ResetMediaElement();
             CurrentTrack = Queue[currentIndex + 1];
             SetTrack();
-        }
-        else {
+        } else {
             _mediaPlayer.Pause();
             _mediaPlayer.Time = 0;
             btnPlay.Content = "\u25b6\ufe0f Play";
@@ -271,8 +266,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             CurrentTrack = Queue[currentIndex - 1];
             SetTrack();
             _mediaPlayer.Play();
-        }
-        else {
+        } else {
             _mediaPlayer.Time = 0;
         }
     }
@@ -421,6 +415,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
             if (record != null)
                 _dbContext.Playlists.Delete(record.Id);
             AllPlaylists.Remove(playlist);
+            OpenHome(btnHome, e);
         }
     }
 
@@ -489,8 +484,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged {
         if (AllPlaylists.Count == 0) {
             addToPlaylist.IsEnabled = false;
             addToPlaylist.ToolTip = "No playlists available";
-        }
-        else {
+        } else {
             foreach (var playlist in AllPlaylists) {
                 var item = new MenuItem { Header = playlist.Name };
                 item.Click += (s, args) => {
